@@ -63,8 +63,10 @@ extern Timezone mTime;
 String createConfidenceMessage(const char* MAC, uint8_t confidence, const char* name, const char* timestamp, bool retain = false, const char* iBeaconStr = nullptr, const char* type = "KNOWN_MAC", const char* manufacturer = "Unknown") {
     char buf[420];
     // Wed Jun 09 2021 20:03:45 GMT+0200 (CEST)
-    snprintf(buf, 420, "{\"id\":\"%s\",%s%s\"confidence\":\"%d\",\"name\":\"%s\",\"manufacturer\":\"%s\",\"type\":\"%s\",\"retained\":\"%s\",\"timestamp\":\"%s\",\"version\":\"%s\"}", 
-        MAC, (iBeaconStr ? iBeaconStr : " "), (iBeaconStr ? "," : " "), confidence, name, manufacturer, type, (retain ? "true" : "false"), timestamp, BLUETOOTH_MON_VERSION);
+    //snprintf(buf, 420, "{\"id\":\"%s\",%s%s\"confidence\":\"%d\",\"name\":\"%s\",\"manufacturer\":\"%s\",\"type\":\"%s\",\"retained\":\"%s\",\"timestamp\":\"%s\",\"version\":\"%s\"}", 
+    //    MAC, (iBeaconStr ? iBeaconStr : " "), (iBeaconStr ? "," : " "), confidence, name, manufacturer, type, (retain ? "true" : "false"), timestamp, BLUETOOTH_MON_VERSION);
+    snprintf(buf, 420,"{\"id\":\"%s\",%s%s\"confidence\":\"%d\",\"name\":\"%s\"}",
+    MAC, (iBeaconStr ? iBeaconStr : " "), (iBeaconStr ? "," : " "), confidence, name);
     return buf;
 }
 
@@ -224,7 +226,7 @@ void BluetoothScanner::HandleBleAdvertisementResult(BLEAdvertisedDevice& bleAdve
                             char rssi_str[25];
                             snprintf(rssi_str, 24, "\"rssi\":\"%d\"", filteredRssi);
                             iBeacon.lastSentRssi = filteredRssi;
-                            std::string topic = m_mqtt_topic + "/" + m_scanner_identity + "/" + iBeacon.name.c_str();
+                            std::string topic = m_mqtt_topic + "l" + m_scanner_identity + "l" + iBeacon.name.c_str();
                             mqtt.send_message(topic.c_str(), 
                                     createConfidenceMessage(iBeacon.uuid.toString().c_str(), iBeacon.confidence, iBeacon.name.c_str(), mTime.dateTime("D M d Y H:i:s ~G~M~TO (T)").c_str(), m_retain, rssi_str, "KNOWN_BEACON" ).c_str(), m_retain
                                 );
@@ -620,7 +622,7 @@ void BluetoothScanner::loop()
                 char rssi_str[25] = "\"rssi\":\"\"";
                 // snprintf(rssi_str, 24, "\"rssi\":\"\"", filteredRssi);
                 iBeacon.lastSentRssi = filteredRssi;
-                std::string topic = m_mqtt_topic + "/" + m_scanner_identity + "/" + iBeacon.name.c_str();
+                std::string topic = m_mqtt_topic + "l" + m_scanner_identity + "l" + iBeacon.name.c_str();
                 mqtt.send_message(topic.c_str(), 
                         createConfidenceMessage(iBeacon.uuid.toString().c_str(), iBeacon.confidence, iBeacon.name.c_str(), mTime.dateTime("D M d Y H:i:s ~G~M~TO (T)").c_str(), m_retain, rssi_str, "KNOWN_BEACON").c_str(), m_retain
                     );
@@ -944,7 +946,7 @@ void BluetoothScanner::HandleReadRemoteNameResult(esp_bt_gap_cb_param_t::read_rm
         }
 
         ESP_LOGI(GAP_TAG, "Remote device name: %s", remoteNameParam.rmt_name);
-        std::string topic = m_mqtt_topic + "/" + m_scanner_identity + "/" + dev.name.c_str();
+        std::string topic = m_mqtt_topic + "l" + m_scanner_identity + "l" + dev.name.c_str();
         mqtt.send_message(topic.c_str(), 
                 createConfidenceMessage(bda2str(dev.mac, macbuf, 18), dev.confidence, dev.name.c_str(), mTime.dateTime("D M d Y H:i:s ~G~M~TO (T)").c_str(), m_retain).c_str(), m_retain
             );
@@ -964,7 +966,7 @@ void BluetoothScanner::HandleReadRemoteNameResult(esp_bt_gap_cb_param_t::read_rm
             dev.confidence = 0;
         }
         ESP_LOGI(GAP_TAG, "Remote device name read failed. Status: %d", remoteNameParam.stat);
-        std::string topic = m_mqtt_topic + "/" + m_scanner_identity + "/" + dev.name.c_str();
+        std::string topic = m_mqtt_topic + "l" + m_scanner_identity + "l" + dev.name.c_str();
         mqtt.send_message(topic.c_str(), 
                 createConfidenceMessage(bda2str(dev.mac, macbuf, 18), dev.confidence, dev.name.c_str(), mTime.dateTime("D M d Y H:i:s ~G~M~TO (T)").c_str(), m_retain).c_str(), m_retain
             );
