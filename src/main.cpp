@@ -81,7 +81,7 @@ Parameter mqtt_server   ("mqtt_server",   "mqtt server", "",         40);
 Parameter mqtt_port     ("mqtt_port",     "mqtt port",   "1883",      6);
 Parameter mqtt_username ("mqtt_username", "username",    "",         32);
 Parameter mqtt_password ("mqtt_password", "password",    "",         32);
-Parameter mqtt_client_id("mqtt_clid",     "Client ID",   "",         32);
+Parameter mqtt_client_id("mqtt_clid",     "Client ID",   "",         40);
 
 Parameter mqtt_topic   ("mqtt_topic",    "topic root",  "monitor",  32);
 Parameter mqtt_identity("mqtt_identity", "identity",    "",         32);
@@ -265,10 +265,10 @@ void setupPreferences() {
     }
 
     // Set default MQTT Client ID if not set:
-    if(strlen(mqtt_client_id.getValue()) < 1) {
-        String client_id = String("ESP32_bt") + String(WIFI_getChipId(),HEX);
-        mqtt_client_id.setValue(client_id.c_str());
-    }
+    //if(strlen(mqtt_client_id.getValue()) < 1) {
+        //String client_id = String("ESP32_bt") + String(WIFI_getChipId(),HEX);
+        //mqtt_client_id.setValue(client_id.c_str());
+    //}
 
     // Remove all preferences under the opened namespace
     //preferences.clear();
