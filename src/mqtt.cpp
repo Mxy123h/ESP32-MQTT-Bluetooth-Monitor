@@ -2,6 +2,7 @@
 #include <string>
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include "parameter.h"
 #include "mqtt.h"
 #include "stackDbgHelper.h"
@@ -72,6 +73,11 @@ void MQTT::loop() {
   SCOPED_STACK_ENTRY;
   // Only loop if configured correctly
   if(!strlen(_mqtt_server)) {
+    return;
+  }
+
+  // WiFi 未恢复前不发起 TCP/MQTT 连接，避免路由器重启期间的无效阻塞。
+  if(WiFi.status() != WL_CONNECTED) {
     return;
   }
 

@@ -73,33 +73,33 @@ WiFiManager wm(mSerial);
 LED led;
 
 // >>> All parameters in order shown in WiFiManager:
-Parameter time_header   ("<h3>Timezone</h3><br>Use e.g. Europe/Amsterdam. <a href='http://wikipedia.org/wiki/List_of_tz_database_time_zones#list'>List of timezones</a><br>(empty for auto-geolocation)<br>");
+Parameter time_header   ("<h3>时区</h3><br>例如 Asia/Shanghai。<a href='http://wikipedia.org/wiki/List_of_tz_database_time_zones#list'>时区列表</a><br>留空则自动定位。<br>");
 Parameter time_zone     ("time_zone",     "",            "",         40);
 // MQTT 
-Parameter mqtt_header   ("<h3>MQTT parameters</h3>");
-Parameter mqtt_server   ("mqtt_server",   "mqtt server", "",         40);
-Parameter mqtt_port     ("mqtt_port",     "mqtt port",   "1883",      6);
-Parameter mqtt_username ("mqtt_username", "username",    "",         32);
-Parameter mqtt_password ("mqtt_password", "password",    "",         32);
-Parameter mqtt_client_id("mqtt_clid",     "Client ID",   "",         40);
+Parameter mqtt_header   ("<h3>MQTT 参数</h3>");
+Parameter mqtt_server   ("mqtt_server",   "MQTT 服务器", "",         40);
+Parameter mqtt_port     ("mqtt_port",     "MQTT 端口",   "1883",      6);
+Parameter mqtt_username ("mqtt_username", "用户名",      "",         32);
+Parameter mqtt_password ("mqtt_password", "密码",        "",         32);
+Parameter mqtt_client_id("mqtt_clid",     "客户端 ID",   "",         32);
 
-Parameter mqtt_topic   ("mqtt_topic",    "topic root",  "monitor",  32);
-Parameter mqtt_identity("mqtt_identity", "identity",    "",         32);
+Parameter mqtt_topic   ("mqtt_topic",    "主题根路径",  "monitor",  32);
+Parameter mqtt_identity("mqtt_identity", "设备标识",    "",         32);
 
 // Bluetooth Monitor settings
-Parameter     bluetooth_monitor_header                     (PSTR("<h3>Bluetooth Monitor settings</h3>"));
-U16Parameter  bluetooth_monitor_arrival_scans              (PSTR("bm_arrival"),    PSTR("# Arrival scans"),               1  );
-U16Parameter  bluetooth_monitor_departure_scans            (PSTR("bm_depart"),     PSTR("# Departure scans"),             3  );
-U16Parameter  bluetooth_monitor_seconds_between_scan_iters (PSTR("bm_iter_time"),  PSTR("Seconds between scan tries"),    3  );
-U16Parameter  bluetooth_monitor_scan_timeout_seconds       (PSTR("bm_timeout"),    PSTR("Scan duration timeout (s)"),     60 );
-U16Parameter  bluetooth_monitor_beacon_expiration          (PSTR("bm_beacon_exp"), PSTR("Beacon expiration time (s)"),    240);
-U16Parameter  bluetooth_monitor_min_time_between_scans     (PSTR("bm_min_time"),   PSTR("Min. time between scans (s)"),   10 );
-U16Parameter  bluetooth_monitor_periodic_scan_interval     (PSTR("bm_period"),     PSTR("Periodic scan interval (s)<br>(Leave empty or '0' to disable periodic scanning)"), 0);
-BoolParameter bluetooth_monitor_retain_flag                (PSTR("bm_retain"),     PSTR("MQTT retain flag (true/false)"), false);
+Parameter     bluetooth_monitor_header                     (PSTR("<h3>蓝牙监视器设置</h3>"));
+ U16Parameter  bluetooth_monitor_arrival_scans              (PSTR("bm_arrival"),    PSTR("到达扫描次数"),                 1  );
+ U16Parameter  bluetooth_monitor_departure_scans            (PSTR("bm_depart"),     PSTR("离开扫描次数"),                 3  );
+ U16Parameter  bluetooth_monitor_seconds_between_scan_iters (PSTR("bm_iter_time"),  PSTR("扫描间隔（秒）"),               3  );
+ U16Parameter  bluetooth_monitor_scan_timeout_seconds       (PSTR("bm_timeout"),    PSTR("扫描超时（秒）"),               60 );
+ U16Parameter  bluetooth_monitor_beacon_expiration          (PSTR("bm_beacon_exp"), PSTR("信标过期时间（秒）"),           240);
+ U16Parameter  bluetooth_monitor_min_time_between_scans     (PSTR("bm_min_time"),   PSTR("两轮扫描最小间隔（秒）"),       10 );
+ U16Parameter  bluetooth_monitor_periodic_scan_interval     (PSTR("bm_period"),     PSTR("定期扫描间隔（秒）<br>留空或填 0 可关闭定期扫描"), 0);
+ BoolParameter bluetooth_monitor_retain_flag                (PSTR("bm_retain"),     PSTR("MQTT 保留消息（true/false）"), false);
 
 // Known Static Bluetooth MAC 
 // Nested struct helper to generate objects and reduce boilerplate...
-Parameter bluetooth_monitor_devices_header (PSTR("<h3>Bluetooth Monitor Devices</h3>"));
+Parameter bluetooth_monitor_devices_header (PSTR("<h3>蓝牙监视设备</h3>"));
 NestWrapper<BluetoothParameter, MAX_NUM_STORED_BLUETOOTH_DEVICES> bluetooth_monitor_parameter_sets;
 
 // <<<
@@ -264,11 +264,14 @@ void setupPreferences() {
         Serial.println("Done!!");
     }
 
-    // Set default MQTT Client ID if not set:
-    //if(strlen(mqtt_client_id.getValue()) < 1) {
-        //String client_id = String("ESP32_bt") + String(WIFI_getChipId(),HEX);
-        //mqtt_client_id.setValue(client_id.c_str());
-    //}
+    // 参数页稍后才会从 NVS 加载。这里必须直接读取持久化值，
+    // 否则每次启动都可能先把内存中的客户端 ID 误设为默认值。
+    String client_id = preferences.getString("mqtt_clid", "");
+    if(client_id.length() < 1) {
+        client_id = String("ESP32_bt") + String(WIFI_getChipId(),HEX);
+        preferences.putString("mqtt_clid", client_id);
+    }
+    mqtt_client_id.setValue(client_id.c_str());
 
     // Remove all preferences under the opened namespace
     //preferences.clear();
@@ -293,7 +296,8 @@ void setupMqttCallbacks() {
     mqtt.clear_callbacks();
 
     std::string baseTopic = mqtt.trimWildcards(mqtt_topic.getValue());
-    mqtt.setStateTopic(baseTopic + "/" + mqtt_identity.getValue() + "/status");
+    // 在线状态直接发布到扫描器主题根，不再追加 /status。
+    mqtt.setStateTopic(baseTopic + "/" + mqtt_identity.getValue());
     mqtt.setIpTopic(baseTopic + "/" + mqtt_identity.getValue() + "/IP");
 
     // ToDo: this becomes a problem when reloading parameters at runtime!!
@@ -470,7 +474,7 @@ void setup() {
     // Note that this will not show up in the MENU!!!
     wifi.addCustomHtmlPage("/bt", [](){
         String page = FPSTR(HTTP_HEAD_START);
-        page.replace(FPSTR(T_v), "Bluetooth Status");
+        page.replace(FPSTR(T_v), "蓝牙状态");
         page += FPSTR(HTTP_SCRIPT);
         page += FPSTR(HTTP_STYLE);
         // Selection for DarkMode: _bodyClass = enable ? "invert" : "";
@@ -484,17 +488,17 @@ void setup() {
             String str = FPSTR("<div class='msg {C}'><strong>{n}</strong> is {s}<br/><em><small>{m}</small></em></div>");
             str.replace("{C}", (dev.state == 1 ? "S" : "D"));
             str.replace("{n}", dev.name);
-            str.replace("{s}", (dev.state == 1 ? "Present" : "Away"));
+            str.replace("{s}", (dev.state == 1 ? "在范围内" : "已离开"));
             bda2str(dev.mac, bda_str, 18);
             str.replace("{m}", bda_str);
             page += str;
         }
 
         page += FPSTR("<hr><br/>"  // MENU_SEP
-                      "<br/><form action='/bt?arrive=1' method='POST'><button name='arrival' value='1'>Arrival Scan</button></form>"
-                      "<br/><form action='/bt?depart=1' method='POST'><button name='departure' value='1'>Departure Scan</button></form>"
-                      "<br/><form action='/bt?scan=1' method='POST'><button name='scan' value='1'>'Any' Scan</button></form>"
-                      "<br/><form action='/bt?refresh=1' method='POST'><button name='refresh' value='1'>Refresh</button></form>");
+                      "<br/><form action='/bt?arrive=1' method='POST'><button name='arrival' value='1'>到达扫描</button></form>"
+                      "<br/><form action='/bt?depart=1' method='POST'><button name='departure' value='1'>离开扫描</button></form>"
+                      "<br/><form action='/bt?scan=1' method='POST'><button name='scan' value='1'>全量扫描</button></form>"
+                      "<br/><form action='/bt?refresh=1' method='POST'><button name='refresh' value='1'>刷新</button></form>");
 
         if(wm.server->hasArg(F("arrive"))) {
             btScanner.startBluetoothScan(ScanType::Arrival);

@@ -71,6 +71,14 @@ private:
     Stream& mSerial;
 
     uint8_t otaBusy = 0;
+
+    // 路由器重启后，底层自动重连偶尔会停留在断开状态。
+    // 这里保存应用层重连状态，作为 WiFiManager/Arduino Core 的兜底。
+    bool _wifiWasConnected = false;
+    bool _wifiReconnectPending = false;
+    unsigned long _wifiReconnectStartedAt = 0;
+    unsigned long _lastWiFiReconnectAttempt = 0;
+
     std::vector<std::function<void(void)>> ota_callback_functions;
 
     std::vector<std::function<void(void)>> paramSaved_callback_functions;

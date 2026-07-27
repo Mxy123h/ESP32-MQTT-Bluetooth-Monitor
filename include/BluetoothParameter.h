@@ -5,8 +5,8 @@
 #include "parameter.h"
 
 
-static const char MAC_ADDR[] PROGMEM = "MAC address / iBeacon UUID";
-static const char ALIAS   [] PROGMEM = "Alias";
+static const char MAC_ADDR[] PROGMEM = "MAC 地址 / iBeacon UUID";
+static const char ALIAS   [] PROGMEM = "设备别名";
 
 
 class BluetoothParameter {
