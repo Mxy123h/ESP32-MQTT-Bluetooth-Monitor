@@ -108,3 +108,13 @@ Find some examples for sensors and automations in HomeAssistant [here](doc/HomeA
 - [ ] Make an ESPHome component for it
 	- **Work In Progress**
  
+
+ ## 设置说明
+ 这里是链接巴法云的配置
+ 应用设置里的`设备标识一定要填写set`
+ <img src="/doc/screenshots/1.jpg" width=480px>
+
+ 蓝牙监控地址在 设置-关于手机-状态信息里
+
+<img src="/doc/screenshots/2.jpg" width=480px>
+<img src="/doc/screenshots/3.jpg" width=480px>
