@@ -112,15 +112,16 @@ Find some examples for sensors and automations in HomeAssistant [here](doc/HomeA
 
  ## 设置说明
 
-### BOOT 键恢复出厂配置
+  ### BOOT 键恢复出厂配置
 
-设备正常启动后，在运行中或 WiFi 配网页面按住 BOOT 键 5 秒，程序会清除 NVS 中保存的 WiFi、MQTT 和蓝牙监视器配置，然后自动重启。清除完成前请不要松开按键，串口会输出清除进度；清除后需要重新连接 `ESP32_bt_XXXX` 热点完成配网。不要在按下 EN/RESET 的同时一直按住 BOOT，否则 ESP32 可能进入下载模式而不运行程序。
+  设备正常启动后，在运行中或 WiFi 配网页面按住 BOOT 键 5 秒，程序会清除 NVS 中保存的 WiFi、MQTT 和蓝牙监视器配置，然后自动重启。清除完成前请不要松开按键，串口会输出清除进度；清除后需要重新连接 `ESP32_bt_XXXX` 热点完成配网。不要在按下 	    EN/RESET 的同时一直按住 BOOT，否则 ESP32 可能进入下载模式而不运行程序。
 
-当前默认使用 GPIO0 作为 BOOT 键，长按时间可在 `platformio.ini` 中通过 `BOOT_BUTTON_GPIO` 和 `BOOT_BUTTON_LONG_PRESS_MS` 修改。短按或未按不会清除数据。
+  当前默认使用 GPIO0 作为 BOOT 键，长按时间可在 `platformio.ini` 中通过 `BOOT_BUTTON_GPIO` 和 `BOOT_BUTTON_LONG_PRESS_MS` 修改。短按或未按不会清除数据。
 
  
  这里是链接巴法云的配置
  应用设置里的`设备标识一定要填写set`
+ 
  <img src="/doc/screenshots/1.jpg" width=480px>
 
  蓝牙监控地址在 设置-关于手机-状态信息里
