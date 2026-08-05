@@ -59,6 +59,19 @@ static_assert(MAX_NUM_STORED_BLUETOOTH_DEVICES <= 40, "Cannot fit more than 40 b
 
 #define WDT_TIMEOUT 8
 
+// BOOT 键默认连接到 GPIO0，按键按下时由内部上拉读取为低电平
+#ifndef BOOT_BUTTON_GPIO
+#define BOOT_BUTTON_GPIO 0
+#endif
+
+#ifndef BOOT_BUTTON_LONG_PRESS_MS
+#define BOOT_BUTTON_LONG_PRESS_MS 5000
+#endif
+
+#ifndef BOOT_BUTTON_SAMPLE_INTERVAL_MS
+#define BOOT_BUTTON_SAMPLE_INTERVAL_MS 20
+#endif
+
 // ================================================
 // >>>>>>>>>>  Global objects  >>>>>>>>>>>>>>>>>>>>
 
@@ -242,6 +255,56 @@ bool ensureAllCaps(std::string& str) {
         c = cu;
     }
     return strUpdated;
+}
+
+// -----------------------------------------------
+// 后台监测 BOOT 长按，主循环被 WiFi 配网页面阻塞时仍能执行恢复
+void bootButtonResetTask(void*) {
+    pinMode(BOOT_BUTTON_GPIO, INPUT_PULLUP);
+    uint32_t pressStartedAt = 0;
+    uint32_t nextProgressAt = 0;
+
+    for (;;) {
+        const uint32_t now = millis();
+        if (digitalRead(BOOT_BUTTON_GPIO) == LOW) {
+            if (pressStartedAt == 0) {
+                pressStartedAt = now;
+                nextProgressAt = now;
+                Serial.printf("检测到 BOOT 按键，请持续按住 %u 秒以清除全部配置...\n", BOOT_BUTTON_LONG_PRESS_MS / 1000);
+            }
+
+            const uint32_t elapsed = now - pressStartedAt;
+            if (elapsed >= BOOT_BUTTON_LONG_PRESS_MS) {
+                Serial.println("BOOT 长按确认，正在清除 NVS 配置...");
+                preferences.end();
+                const esp_err_t eraseError = nvs_flash_erase();
+                const esp_err_t initError = nvs_flash_init();
+                Serial.printf("NVS 清除结果 erase=%d init=%d\n", eraseError, initError);
+                Serial.println("请松开 BOOT 按键，设备即将重启");
+
+                // 必须先等按键释放，避免重启后 GPIO0 仍为低电平而进入下载模式
+                while (digitalRead(BOOT_BUTTON_GPIO) == LOW) {
+                    delay(BOOT_BUTTON_SAMPLE_INTERVAL_MS);
+                }
+                delay(100);
+                ESP.restart();
+                vTaskDelete(nullptr);
+            }
+
+            if (now >= nextProgressAt) {
+                Serial.printf("BOOT 长按进度 %lu/%u ms\n", static_cast<unsigned long>(elapsed), BOOT_BUTTON_LONG_PRESS_MS);
+                nextProgressAt += 1000;
+            }
+        }
+        else {
+            if (pressStartedAt != 0) {
+                Serial.println("BOOT 按键已释放，未执行清除");
+            }
+            pressStartedAt = 0;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(BOOT_BUTTON_SAMPLE_INTERVAL_MS));
+    }
 }
 
 // -----------------------------------------------
@@ -462,6 +525,10 @@ void setup() {
     // Begin Serial separate!
     Serial.begin(115200, SERIAL_8N1);
 
+    const BaseType_t bootTaskResult = xTaskCreatePinnedToCore(bootButtonResetTask, "boot_button", 3072, nullptr, 1, nullptr, 0);
+    if (bootTaskResult != pdPASS) {
+        Serial.println("BOOT 按键监测任务创建失败");
+    }
     setupPreferences();
 
     mSerial.println("Booting");

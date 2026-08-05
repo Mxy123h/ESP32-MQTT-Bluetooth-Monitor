@@ -66,6 +66,12 @@ The settings menu contains all settings related to the BT monitor application as
 
 In case you need to revisit the configuration pages you can do so by navigating to the ESP32's IP address on your home network. To prevent others from tinkering with your device any access to it's webpage once it's connected to your WiFi network is password protected! To log on, use username ```admin``` and password ```1234```.
 
+### BOOT 键恢复出厂配置
+
+设备正常启动后，在运行中或 WiFi 配网页面按住 BOOT 键 5 秒，程序会清除 NVS 中保存的 WiFi、MQTT 和蓝牙监视器配置，然后自动重启。清除完成前请不要松开按键，串口会输出清除进度；清除后需要重新连接 `ESP32_bt_XXXX` 热点完成配网。不要在按下 EN/RESET 的同时一直按住 BOOT，否则 ESP32 可能进入下载模式而不运行程序。
+
+当前默认使用 GPIO0 作为 BOOT 键，长按时间可在 `platformio.ini` 中通过 `BOOT_BUTTON_GPIO` 和 `BOOT_BUTTON_LONG_PRESS_MS` 修改。短按或未按不会清除数据。
+
 ## Usage
 ### web control
 The ESP32 bluetooth scan status can be seen through the devices webpage by following the __BT Monitor__ link in the main menu. This page will show you all configured devices by name and MAC address, as well as their away / present state. From this page you can also trigger various scans and update the page to load the new scan results.
